@@ -1,4 +1,4 @@
-# 多洛可日常信息增强 / Doloc Daily Info Enhanced
+<img width="1280" height="720" alt="calendar" src="https://github.com/user-attachments/assets/a64cd715-9242-46a4-b74c-6005fb29b04e" /># 多洛可日常信息增强 / Doloc Daily Info Enhanced
 
 《多洛可小镇》（Doloc Town）的功能性模组：把「今天有什么要紧事」直接摊在日历和时钟下面——作物什么时候熟、谁过生日、今天什么节日、游商来没来。
 
@@ -119,6 +119,8 @@ dotnet build -c Release
 3. 编辑器改用鼠标操作而不是键盘。
 4. 性能：`CropScan` 目前每秒重建一次全部农场的快照，可能有优化空间（未确认）。
 5. 文案/介绍的润色。
+6. <img width="1280" height="720" alt="calendar" src="https://github.com/user-attachments/assets/8af8a9a2-77ef-42d9-9e55-a96901f29f50" />
+优化作物成熟日期预测中可能存在的针对建筑物内作物以及施肥作物以及前二者叠加情况下的预测。
 
 ## 其它
 
