@@ -186,7 +186,7 @@ namespace SomeOptimizations
                     continue;
                 }
 
-                if (ModConfig.HideFullLikingBirthday && IsFullLiking(npcId))
+                if (!ModConfig.ShowFullLikingBirthday && IsFullLiking(npcId))
                 {
                     continue;
                 }
@@ -196,7 +196,7 @@ namespace SomeOptimizations
                     Kind = BadgeKind.Birthday,
                     Key = "birthday:" + npcId,
                     Icon = NpcIcon(npcId),
-                    Heart = ModConfig.ShowBirthdayHeart,
+                    Heart = !ModConfig.HideBirthdayHeart,
                     Hover = NpcTitle(npcId) + "的生日"
                 });
             }
@@ -283,7 +283,6 @@ namespace SomeOptimizations
 
             CropBatch first = today[0];
             HashSet<string> seeds = new HashSet<string>();
-            int total = 0;
             for (int i = 0; i < today.Count; i++)
             {
                 CropBatch batch = today[i];
@@ -293,16 +292,28 @@ namespace SomeOptimizations
                 }
 
                 seeds.Add(batch.SeedId);
-                total += batch.Count;
             }
 
-            string hover = first.Name + " ×" + total;
-            if (seeds.Count > 1)
+            string hover;
+            if (first.Ripe > 0)
             {
-                hover += "（共 " + seeds.Count + " 种作物）";
+                // Standing ripe and unharvested: the time of day is meaningless here (the remembered
+                // moment is when it was first noticed), so only report the count that is ready now.
+                hover = first.Name + " x" + first.Ripe + " 已成熟";
+                if (seeds.Count > 1)
+                {
+                    hover += "（还有 " + (seeds.Count - 1) + " 种作物）";
+                }
             }
-
-            hover += "，预计 " + GameTime.FormatMinute(first.FirstExact % 1440f, ModConfig.ShowExactTime) + " 成熟";
+            else
+            {
+                hover = first.Name + " x" + first.Count + "，预计 "
+                        + GameTime.FormatMinute(first.FirstExact % 1440f, ModConfig.ShowExactTime) + " 成熟";
+                if (seeds.Count > 1)
+                {
+                    hover += "（共 " + seeds.Count + " 种作物）";
+                }
+            }
 
             list.Add(new Badge
             {

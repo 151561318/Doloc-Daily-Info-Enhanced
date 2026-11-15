@@ -45,9 +45,9 @@ namespace SomeOptimizations
             }
         }
 
-        internal static bool HideFullLikingBirthday => s_settings.HideFullLikingBirthday;
+        internal static bool ShowFullLikingBirthday => s_settings.ShowFullLikingBirthday;
 
-        internal static bool ShowBirthdayHeart => s_settings.ShowBirthdayHeart;
+        internal static bool HideBirthdayHeart => s_settings.HideBirthdayHeart;
 
         internal static bool DisablePikeSpecial => s_settings.DisablePikeSpecial;
 
@@ -193,22 +193,22 @@ namespace SomeOptimizations
             menu.AddSectionTitle(s_manifest, () => "角色生日与节日提醒");
             menu.AddBoolOption(
                 s_manifest,
-                () => "满好感度角色不显示生日提醒",
-                () => "勾选后好感度已满的角色过生日时不再悬挂头像。",
-                () => s_settings.HideFullLikingBirthday,
+                () => "满好感度角色仍显示生日提醒",
+                () => "默认关闭：好感度已满的角色过生日时不再悬挂头像；勾选后照常提醒。",
+                () => s_settings.ShowFullLikingBirthday,
                 value =>
                 {
-                    s_settings.HideFullLikingBirthday = value;
+                    s_settings.ShowFullLikingBirthday = value;
                     Save();
                 });
             menu.AddBoolOption(
                 s_manifest,
-                () => "生日头像显示小爱心",
-                () => "在过生日的角色头像右下角显示一个爱心。",
-                () => s_settings.ShowBirthdayHeart,
+                () => "生日提醒不显示小爱心",
+                () => "默认关闭：过生日的角色头像右下角显示一个小爱心；勾选后不显示。",
+                () => s_settings.HideBirthdayHeart,
                 value =>
                 {
-                    s_settings.ShowBirthdayHeart = value;
+                    s_settings.HideBirthdayHeart = value;
                     Save();
                 });
 

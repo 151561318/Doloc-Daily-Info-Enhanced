@@ -620,10 +620,14 @@ namespace SomeOptimizations
         private static float RipeMoment(PlantBasin basin, int nowAbsMinute)
         {
             BasinMemo memo = Memos.GetOrCreateValue(basin);
-            if (!memo.Ripe)
+            int dayStart = nowAbsMinute - nowAbsMinute % 1440;
+            if (!memo.Ripe || memo.RipeMinute < dayStart)
             {
+                // A crop that was already ripe before midnight is re-stamped onto the current day:
+                // otherwise the remembered minute lands on a past day, AddSample() drops it, and the
+                // "ready to harvest" reminder disappears until the save is reloaded.
                 memo.Ripe = true;
-                memo.RipeMinute = nowAbsMinute;
+                memo.RipeMinute = dayStart;
             }
 
             return memo.RipeMinute;

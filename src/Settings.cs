@@ -14,9 +14,9 @@ namespace SomeOptimizations
 
         public string BadgeBackground { get; set; } = "dark";
 
-        public bool HideFullLikingBirthday { get; set; }
+        public bool ShowFullLikingBirthday { get; set; }
 
-        public bool ShowBirthdayHeart { get; set; } = true;
+        public bool HideBirthdayHeart { get; set; }
 
         public bool DisablePikeSpecial { get; set; }
 
