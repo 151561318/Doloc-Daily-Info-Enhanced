@@ -121,10 +121,28 @@ namespace SomeOptimizations
             }
         }
 
+        private static string DisplayName()
+        {
+            try
+            {
+                string name = s_manifest != null ? s_manifest.Name : null;
+                if (!string.IsNullOrEmpty(name))
+                {
+                    return name;
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Exception(ex, "config menu display name");
+            }
+
+            return "多洛可日常信息增强";
+        }
+
         private static void Register(IDtmConfigMenuApi menu)
         {
             menu.Register(s_manifest, ResetAll, () => Save(), false);
-            menu.SetDisplayName(s_manifest, () => "一些优化");
+            menu.SetDisplayName(s_manifest, () => DisplayName());
 
             menu.AddSectionTitle(s_manifest, () => "作物成熟日期预测");
             menu.AddBoolOption(
