@@ -33,6 +33,13 @@ namespace SomeOptimizations
             /// <summary>Per-crop pixel nudges inside the calendar cell: seedId -> "x,y".</summary>
             [DataMember(Name = "cropOffsets", Order = 4)]
             public Dictionary<string, string> CropOffsets = new Dictionary<string, string>();
+
+            /// <summary>
+            /// Absolute day the "Pike is in town" mission was first seen listening, so the reminder
+            /// can stay on that day only. 0 / negative means "not recorded".
+            /// </summary>
+            [DataMember(Name = "pikeDay", Order = 5)]
+            public int PikeDay = -1;
         }
 
         private static readonly DataContractJsonSerializer Serializer =
@@ -98,6 +105,14 @@ namespace SomeOptimizations
                         if (s_data.CropOffsets == null)
                         {
                             s_data.CropOffsets = new Dictionary<string, string>();
+                        }
+
+                        // DataContractJsonSerializer builds the object without running field
+                        // initialisers, so a member that the old file does not contain keeps the
+                        // default of its type (0) instead of the -1 written above.
+                        if (s_data.PikeDay <= 0)
+                        {
+                            s_data.PikeDay = -1;
                         }
 
                         Layout.ApplyCropOffsets(s_data.CropOffsets);
@@ -212,8 +227,35 @@ namespace SomeOptimizations
             }
         }
 
-        // --- layout -------------------------------------------------------------------------
+        // --- Pike arrival day ---------------------------------------------------------------
 
+        /// <summary>Absolute day Pike was first seen waiting for the player; 0 or less = unknown.</summary>
+        internal static int PikeDay => s_data.PikeDay;
+
+        internal static void SetPikeDay(int day)
+        {
+            if (s_data.PikeDay == day)
+            {
+                return;
+            }
+
+            s_data.PikeDay = day;
+            Save();
+        }
+
+        /// <summary>Called on every scan while the mission is not listening, so it must stay cheap.</summary>
+        internal static void ClearPikeDay()
+        {
+            if (s_data.PikeDay == -1)
+            {
+                return;
+            }
+
+            s_data.PikeDay = -1;
+            Save();
+        }
+
+        // --- layout -------------------------------------------------------------------------
         internal static void ApplyLayout(List<Layout.Item> items)
         {
             for (int i = 0; i < items.Count; i++)

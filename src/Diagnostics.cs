@@ -96,6 +96,7 @@ namespace SomeOptimizations
             }
 
             Log.Info("diag " + CropScan.DebugSummary());
+            Log.Info("diag " + FilmScan.DebugSummary());
             Log.Info("diag " + Reminders.DebugMerchants());
         }
     }

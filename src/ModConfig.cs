@@ -36,6 +36,8 @@ namespace SomeOptimizations
 
         internal static bool DisableMatureHighlight => s_settings.DisableMatureHighlight;
 
+        internal static bool DisableTreeCrops => s_settings.DisableTreeCrops;
+
         internal static string BadgeBackground
         {
             get
@@ -55,13 +57,21 @@ namespace SomeOptimizations
 
         internal static bool DisableLicca => s_settings.DisableLicca;
 
+        internal static bool DisableLiccaEverNight => s_settings.DisableLiccaEverNight;
+
+        internal static bool DisableFestivalWindow => s_settings.DisableFestivalWindow;
+
         internal static bool DisableMerchantCanMoveIn => s_settings.DisableMerchantCanMoveIn;
+
+        internal static bool DisableFilmWarning => s_settings.DisableFilmWarning;
 
         internal static bool RestoreResinCollectorPriority => s_settings.RestoreResinCollectorPriority;
 
         internal static bool ShowLayoutEditor => s_settings.ShowLayoutEditor;
 
         internal static bool DemoBadges => s_settings.DemoBadges;
+
+        internal static bool DiagnosticsLog => s_settings.DiagnosticsLog;
 
         internal static int PreviewOnStart => s_settings.PreviewOnStart;
 
@@ -87,6 +97,7 @@ namespace SomeOptimizations
             try
             {
                 s_settings = s_config.ReadConfig<Settings>(s_manifest) ?? new Settings();
+                Diagnostics.Enabled = s_settings.DiagnosticsLog;
                 s_ready = true;
             }
             catch (Exception ex)
@@ -178,6 +189,16 @@ namespace SomeOptimizations
                     s_settings.DisableMatureHighlight = value;
                     Save();
                 });
+            menu.AddBoolOption(
+                s_manifest,
+                () => "关闭立木架（可可树）的成熟提醒",
+                () => "勾选后立木架里种的树（可可树）成熟时不再计入日历与时钟下方提醒；默认计入。",
+                () => s_settings.DisableTreeCrops,
+                value =>
+                {
+                    s_settings.DisableTreeCrops = value;
+                    Save();
+                });
             menu.AddColorPresetOption(
                 s_manifest,
                 () => "悬挂图标背景颜色",
@@ -211,6 +232,16 @@ namespace SomeOptimizations
                     s_settings.HideBirthdayHeart = value;
                     Save();
                 });
+            menu.AddBoolOption(
+                s_manifest,
+                () => "关闭特定节日参与时间提醒",
+                () => "默认关闭：长夜节第 4 天起每天 18:00-24:00、蘑菇节最后一天 9:00-18:00，节日角标会闪动边框提醒你到场；勾选后不再闪动。",
+                () => s_settings.DisableFestivalWindow,
+                value =>
+                {
+                    s_settings.DisableFestivalWindow = value;
+                    Save();
+                });
 
             menu.AddSectionTitle(s_manifest, () => "游商到来提醒");
             menu.AddBoolOption(
@@ -235,6 +266,16 @@ namespace SomeOptimizations
                 });
             menu.AddBoolOption(
                 s_manifest,
+                () => "关闭长夜节时莉卡到来的提醒",
+                () => "长夜节期间（最后三天起默认就不提醒）莉卡一直待在镇上，勾选后整个节日期间都不提醒她来到小镇。",
+                () => s_settings.DisableLiccaEverNight,
+                value =>
+                {
+                    s_settings.DisableLiccaEverNight = value;
+                    Save();
+                });
+            menu.AddBoolOption(
+                s_manifest,
                 () => "关闭商埠游商到来的提醒",
                 () => "夏洛克、帕伊雅、奇普来到小镇时不再悬挂头像（已入驻的不再提醒）。",
                 () => s_settings.DisablePortMerchant,
@@ -254,6 +295,18 @@ namespace SomeOptimizations
                     Save();
                 });
 
+            menu.AddSectionTitle(s_manifest, () => "农场维护提醒");
+            menu.AddBoolOption(
+                s_manifest,
+                () => "关闭塑料薄膜耐久提醒",
+                () => "农场（农场 / 旧城农场 / 湿地农场）上有塑料薄膜剩余时间低于 20 小时时，在时钟下方悬挂薄膜图标提醒；勾选后不再提醒。",
+                () => s_settings.DisableFilmWarning,
+                value =>
+                {
+                    s_settings.DisableFilmWarning = value;
+                    Save();
+                });
+
             menu.AddSectionTitle(s_manifest, () => "其他");
             menu.AddBoolOption(
                 s_manifest,
@@ -263,6 +316,18 @@ namespace SomeOptimizations
                 value =>
                 {
                     s_settings.RestoreResinCollectorPriority = value;
+                    Save();
+                });
+
+            menu.AddBoolOption(
+                s_manifest,
+                () => "记录诊断日志（排障用）",
+                () => "勾选后把作物批次、徽章列表等诊断信息写进 BepInEx 日志；平时请保持关闭，排查「时间显示异常」时再打开。",
+                () => s_settings.DiagnosticsLog,
+                value =>
+                {
+                    s_settings.DiagnosticsLog = value;
+                    Diagnostics.Enabled = value;
                     Save();
                 });
 
@@ -333,6 +398,7 @@ namespace SomeOptimizations
         private static void ResetAll()
         {
             s_settings = new Settings();
+            Diagnostics.Enabled = s_settings.DiagnosticsLog;
             Save();
         }
 

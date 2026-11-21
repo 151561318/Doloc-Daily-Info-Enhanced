@@ -542,8 +542,9 @@ namespace SomeOptimizations
                 return batch.Name + "*" + batch.Count + "已成熟待收割";
             }
 
-            string first = GameTime.FormatMinute(batch.FirstExact, ModConfig.ShowExactTime);
-            string last = GameTime.FormatMinute(batch.LastExact, ModConfig.ShowExactTime);
+            string first = GameTime.FormatMinute(CropScan.MinuteOfDay(batch), ModConfig.ShowExactTime);
+            string last = GameTime.FormatMinute(batch.LastExact - batch.AbsDay * GameTime.MinutesPerDay,
+                ModConfig.ShowExactTime);
             string when = first == last ? "（" + first + "）" : "（" + first + "~" + last + "）";
             return batch.Name + "*" + batch.Count + when + "成熟";
         }

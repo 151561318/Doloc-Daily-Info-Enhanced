@@ -15,7 +15,8 @@ namespace SomeOptimizations
         Birthday = 1,
         Merchant = 2,
         Crop = 3,
-        Festival = 4
+        Film = 4,
+        Festival = 5
     }
 
     internal sealed class Badge
@@ -71,7 +72,8 @@ namespace SomeOptimizations
             AddBirthdays(list, events);
             AddMerchants(list, now);
             AddCrops(list);
-            AddFestivals(list, events);
+            AddFilm(list);
+            AddFestivals(list, events, now);
 
             if ((DemoMode || ModConfig.DemoBadges) && list.Count == 0)
             {
@@ -117,6 +119,13 @@ namespace SomeOptimizations
                 });
                 list.Add(new Badge
                 {
+                    Kind = BadgeKind.Film,
+                    Key = "demo:film",
+                    Icon = FilmScan.Icon(),
+                    Hover = "示例：农场的塑料薄膜耐久度低于20小时。"
+                });
+                list.Add(new Badge
+                {
                     Kind = BadgeKind.Festival,
                     Key = "demo:festival",
                     Icon = DolocAPI.LoadSprite("节日角标-鲑鱼节"),
@@ -149,6 +158,31 @@ namespace SomeOptimizations
 
             if (!listening)
             {
+                // Mission finished (or not started): forget the arrival day so the next time it
+                // starts listening is treated as a new arrival.
+                ModState.ClearPikeDay();
+                return;
+            }
+
+            int day = ModState.PikeDay;
+            if (day <= 0)
+            {
+                // The mission keeps "listening" until the player finally talks to him, so the flag
+                // alone cannot tell arrival day from a week later. Stamp the day the moment it turns
+                // on - but only while he is actually on the map, otherwise loading an old save into
+                // a day he is already gone would raise a bogus reminder.
+                if (!PikeInTown())
+                {
+                    return;
+                }
+
+                day = GameTime.Today;
+                ModState.SetPikeDay(day);
+            }
+
+            if (day != GameTime.Today)
+            {
+                // He came, nobody talked, and the day is over: stop nagging.
                 return;
             }
 
@@ -160,6 +194,24 @@ namespace SomeOptimizations
                 Glow = true,
                 Hover = "派克来到了小镇"
             });
+        }
+
+        /// <summary>True while Pike is somewhere in town rather than parked in the off-map scene.</summary>
+        private static bool PikeInTown()
+        {
+            try
+            {
+                if (DolocAPI.QueryNpc("pike", out Npc npc) && npc != null)
+                {
+                    return !npc.IsAtVoidScene;
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Exception(ex, "pike npc probe");
+            }
+
+            return false;
         }
 
         private static void AddBirthdays(List<Badge> list, List<DateEventInfo> events)
@@ -206,7 +258,8 @@ namespace SomeOptimizations
         {
             EnsureVisits(now);
 
-            if (!ModConfig.DisableLicca)
+            // 长夜节期间莉卡本来就在镇上（最后三天经营的是长夜集市，不是游商摊位）。
+            if (!ModConfig.DisableLicca && !Festivals.SilenceLicca(now))
             {
                 AddMerchant(list, "licca", "莉卡来到了小镇");
             }
@@ -308,7 +361,7 @@ namespace SomeOptimizations
             else
             {
                 hover = first.Name + " x" + first.Count + "，预计 "
-                        + GameTime.FormatMinute(first.FirstExact % 1440f, ModConfig.ShowExactTime) + " 成熟";
+                        + GameTime.FormatMinute(CropScan.MinuteOfDay(first), ModConfig.ShowExactTime) + " 成熟";
                 if (seeds.Count > 1)
                 {
                     hover += "（共 " + seeds.Count + " 种作物）";
@@ -327,7 +380,27 @@ namespace SomeOptimizations
             });
         }
 
-        private static void AddFestivals(List<Badge> list, List<DateEventInfo> events)
+        /// <summary>
+        /// One badge for every farm that has a plastic film about to wear out, whatever the species
+        /// or the count - the hover text names the farms instead of counting planters.
+        /// </summary>
+        private static void AddFilm(List<Badge> list)
+        {
+            if (ModConfig.DisableFilmWarning || !FilmScan.Any)
+            {
+                return;
+            }
+
+            list.Add(new Badge
+            {
+                Kind = BadgeKind.Film,
+                Key = "film",
+                Icon = FilmScan.Icon(),
+                Hover = FilmScan.Hover()
+            });
+        }
+
+        private static void AddFestivals(List<Badge> list, List<DateEventInfo> events, DateInfo now)
         {
             for (int i = 0; i < events.Count; i++)
             {
@@ -347,12 +420,27 @@ namespace SomeOptimizations
                     Log.Exception(ex, "festival icon " + ev.Id);
                 }
 
+                // Some festivals only need the player at a certain hour on certain days (the long
+                // night story starts at 18:00, the mushroom judging closes at 18:00); those badges
+                // pulse so the moment is not missed.
+                bool highlight;
+                try
+                {
+                    highlight = Festivals.HighlightEvent(ev.Id, now);
+                }
+                catch (Exception ex)
+                {
+                    Log.Exception(ex, "festival window " + ev.Id);
+                    highlight = false;
+                }
+
                 string title = TrimStar(ev.Title);
                 list.Add(new Badge
                 {
                     Kind = BadgeKind.Festival,
                     Key = "festival:" + ev.Id,
                     Icon = icon,
+                    Glow = highlight,
                     Hover = string.IsNullOrEmpty(ev.Description) ? title : title + "\n" + ev.Description
                 });
             }

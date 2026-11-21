@@ -12,6 +12,9 @@ namespace SomeOptimizations
 
         public bool DisableMatureHighlight { get; set; }
 
+        /// <summary>Skips the tree stand (cocoa tree) when scanning for maturing crops.</summary>
+        public bool DisableTreeCrops { get; set; }
+
         public string BadgeBackground { get; set; } = "dark";
 
         public bool ShowFullLikingBirthday { get; set; }
@@ -24,7 +27,16 @@ namespace SomeOptimizations
 
         public bool DisableLicca { get; set; }
 
+        /// <summary>Silences Licca's reminder for the whole long-night festival instead of its last three days.</summary>
+        public bool DisableLiccaEverNight { get; set; }
+
+        /// <summary>Stops the festival badge from pulsing during a festival's story/participation window.</summary>
+        public bool DisableFestivalWindow { get; set; }
+
         public bool DisableMerchantCanMoveIn { get; set; }
+
+        /// <summary>Suppresses the "plastic film is about to wear out" reminder.</summary>
+        public bool DisableFilmWarning { get; set; }
 
         public bool RestoreResinCollectorPriority { get; set; }
 
@@ -39,6 +51,9 @@ namespace SomeOptimizations
         public string DemoKey { get; set; }
 
         public string DumpKey { get; set; }
+
+        /// <summary>Turns on the verbose "diag" log lines (troubleshooting only).</summary>
+        public bool DiagnosticsLog { get; set; }
 
         /// <summary>
         /// Debug only: 1 opens the calendar preview, 2 the clock-row preview, right after the editor

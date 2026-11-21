@@ -55,6 +55,14 @@ namespace SomeOptimizations
             int value = exact
                 ? Mathf.FloorToInt(absMinute)
                 : Mathf.CeilToInt(absMinute / 5f) * 5;
+
+            // A crop that ripens exactly when the clock rolls over is listed on the day that ends,
+            // so it must read "24:00" there rather than "00:00" of a day it is not shown on.
+            if (value == MinutesPerDay)
+            {
+                return "24:00";
+            }
+
             return Clock(value);
         }
 
