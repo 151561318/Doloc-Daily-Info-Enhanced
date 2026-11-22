@@ -39,6 +39,9 @@ namespace SomeOptimizations
     {
         internal const string PikeMission = "ruinedcity_main_1";
 
+        /// <summary>主线「河道疏通」的最后一节：河路通了，商埠才算开放，游商才可能来。</summary>
+        private const string RiverwayDone = "riverway_main_2";
+
         private static readonly string[] PortMerchants = { "shylock", "paiea", "quipu", "kenenimuu" };
 
         private static readonly Dictionary<string, string> MerchantFaction = new Dictionary<string, string>
@@ -264,7 +267,10 @@ namespace SomeOptimizations
                 AddMerchant(list, "licca", "莉卡来到了小镇");
             }
 
-            for (int i = 0; i < PortMerchants.Length; i++)
+            // 商埠没开之前，这几位不可能到访（他们的日程也还没启用），一律不提示。
+            bool portOpen = TreatyPortOpen();
+
+            for (int i = 0; i < PortMerchants.Length && portOpen; i++)
             {
                 string merchant = PortMerchants[i];
                 if (Tracking.TalkedToday(merchant))
@@ -536,6 +542,12 @@ namespace SomeOptimizations
                 return false;
             }
 
+            // 商埠没修好之前谈不上入驻。
+            if (!TreatyPortOpen())
+            {
+                return false;
+            }
+
             try
             {
                 if (!DolocAPI.QueryTreatyPortFaction(factionId, out TreatyPortFaction faction) || faction == null)
@@ -548,8 +560,20 @@ namespace SomeOptimizations
                     return false;
                 }
 
+                // 联络被暂时掐断时（剧情/冷却），游戏里发不出邀请。
+                if (faction.DisableContact)
+                {
+                    return false;
+                }
+
                 TreatyPortFactionInfo info = faction.Proto;
                 if (info == null || !info.UnlockInDemo)
+                {
+                    return false;
+                }
+
+                // 招募面板要求「已经认识联络人」才能邀请（否则只提示"尚未联络"）。
+                if (!string.IsNullOrEmpty(info.Contact) && !DolocAPI.IsVisitedNpcName(info.Contact))
                 {
                     return false;
                 }
@@ -587,31 +611,49 @@ namespace SomeOptimizations
 
         private static bool VisitsToday(string npcId, DateInfo now, DolocTown.Config.Weather.WeatherType weather)
         {
+            Npc npc;
             try
             {
-                if (DolocAPI.QueryNpc(npcId, out Npc npc) && npc != null && !npc.IsAtVoidScene)
+                if (!DolocAPI.QueryNpc(npcId, out npc) || npc == null || npc.proto == null)
                 {
-                    return true;
+                    return false;
                 }
             }
             catch (Exception ex)
             {
                 Log.Exception(ex, "npc probe " + npcId);
+                return false;
             }
 
             try
             {
-                if (!DolocAPI.QueryNpc(npcId, out Npc npc2) || npc2 == null || npc2.proto == null)
+                // 人在场景里，就是来了。
+                if (!npc.IsAtVoidScene)
+                {
+                    return true;
+                }
+
+                // 停在虚空场景、日程又没启用 = 剧情还没让他登场（商埠没开时几位商埠游商就是这样）。
+                // 以前这里不看日程状态，直接拿配置表里的日程推算「他今天会在码头」，
+                // 于是商埠还没修好就开始提示「某某来到了小镇」。
+                if (!npc.useSchedule)
                 {
                     return false;
                 }
+            }
+            catch (Exception ex)
+            {
+                Log.Exception(ex, "npc state probe " + npcId);
+            }
 
+            try
+            {
                 DateInfo probe = now.Copy();
                 for (int hour = 6; hour < 24; hour++)
                 {
                     probe.Hour = hour;
                     probe.Minute = 0;
-                    NpcScheduleResult result = npc2.proto.QueryScheduleResult(new NpcScheduleParams(probe, weather));
+                    NpcScheduleResult result = npc.proto.QueryScheduleResult(new NpcScheduleParams(probe, weather));
                     if (!string.IsNullOrEmpty(result.sceneName))
                     {
                         return true;
@@ -621,6 +663,39 @@ namespace SomeOptimizations
             catch (Exception ex)
             {
                 Log.Exception(ex, "schedule probe " + npcId);
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// 商埠是否已经开放。两条独立信号，任一成立即认为开了：
+        ///  - 主线「河道疏通」最后一节完成（河路通了）；
+        ///  - 多洛可与孔蒂基已入驻——游戏在「修缮商埠」完成时会自动结算这两方。
+        /// 第二条是兜底：任务节点编号在游戏版本之间变过（旧补丁里还出现过 trading_port_main_9@1），
+        /// 光靠任务 id 判断，一旦编号改了就会永久不提醒。
+        /// </summary>
+        private static bool TreatyPortOpen()
+        {
+            try
+            {
+                if (DolocAPI.IsMissionComplete(RiverwayDone))
+                {
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Exception(ex, "riverway probe");
+            }
+
+            try
+            {
+                return DolocAPI.QueryFactionJoinState(FactionType.KonTiki);
+            }
+            catch (Exception ex)
+            {
+                Log.Exception(ex, "port join probe");
             }
 
             return false;
