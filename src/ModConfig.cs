@@ -51,6 +51,8 @@ namespace SomeOptimizations
 
         internal static bool HideBirthdayHeart => s_settings.HideBirthdayHeart;
 
+        internal static bool DisablePlayerBirthday => s_settings.DisablePlayerBirthday;
+
         internal static bool DisablePikeSpecial => s_settings.DisablePikeSpecial;
 
         internal static bool DisablePortMerchant => s_settings.DisablePortMerchant;
@@ -76,6 +78,8 @@ namespace SomeOptimizations
         internal static int PreviewOnStart => s_settings.PreviewOnStart;
 
         internal static string EditorKey => KeyName(s_settings.EditorKey, "F7");
+
+        internal static string PlayerEditorKey => KeyName(s_settings.PlayerEditorKey, "F8");
 
         internal static string SaveKey => KeyName(s_settings.SaveKey, "F9");
 
@@ -234,6 +238,16 @@ namespace SomeOptimizations
                 });
             menu.AddBoolOption(
                 s_manifest,
+                () => "关闭玩家生日提醒",
+                () => "勾选后你自己的生日不再显示。默认显示：生日当天时钟下方会出现你的头像，18:00-22:00（酒馆生日会时段）边框会闪动。",
+                () => s_settings.DisablePlayerBirthday,
+                value =>
+                {
+                    s_settings.DisablePlayerBirthday = value;
+                    Save();
+                });
+            menu.AddBoolOption(
+                s_manifest,
                 () => "关闭特定节日参与时间提醒",
                 () => "默认关闭：长夜节第 4 天起每天 18:00-24:00、蘑菇节最后一天 9:00-18:00，节日角标会闪动边框提醒你到场；勾选后不再闪动。",
                 () => s_settings.DisableFestivalWindow,
@@ -361,6 +375,16 @@ namespace SomeOptimizations
                 value =>
                 {
                     s_settings.EditorKey = value;
+                    Save();
+                });
+            menu.AddKeybindOption(
+                s_manifest,
+                () => "玩家头像编辑器开关键",
+                () => "按该键打开玩家生日头像的位置微调面板（默认 F8），面板打开时会强制显示玩家生日徽章，方便对着真实尺寸调。",
+                () => PlayerEditorKey,
+                value =>
+                {
+                    s_settings.PlayerEditorKey = value;
                     Save();
                 });
             menu.AddKeybindOption(

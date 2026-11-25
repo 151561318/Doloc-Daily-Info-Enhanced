@@ -27,6 +27,12 @@ namespace SomeOptimizations
         private static bool s_inputBlocked;
         private static bool s_previewAutoShown;
 
+        /// <summary>Player-portrait mode: the panel only walks the <c>hud.player.*</c> values and the
+        /// badge is force-shown, so the portrait can be tuned at real size.</summary>
+        private static bool s_portraitMode;
+
+        private static readonly List<Layout.Item> s_portraitItems = new List<Layout.Item>();
+
         /// <summary>0 = numeric list, <see cref="PreviewUi.PageCalendar"/> / <see cref="PreviewUi.PageHud"/>.</summary>
         private static int s_previewPage;
 
@@ -191,22 +197,46 @@ namespace SomeOptimizations
                     }
                 }
 
+                // Dedicated panel for the player's birthday portrait (F8): the sprite is a rig frame,
+                // not a calendar portrait, so it needs its own scale/offset values - and it has to be
+                // visible while tuning even when the saved birthday is another day.
+                if (ModConfig.ShowLayoutEditor && Pressed(ModConfig.PlayerEditorKey))
+                {
+                    TogglePortraitEditor();
+                }
+
                 // The DTMAPI option is the master switch: with it off the key does nothing at all.
                 if (ModConfig.ShowLayoutEditor && Pressed(ModConfig.EditorKey))
                 {
-                    s_enabled = !s_enabled;
-                    if (s_enabled)
+                    if (s_enabled && s_portraitMode)
                     {
+                        // Coming from the portrait panel, F7 returns to the full list rather than
+                        // closing the overlay: same window, different value set.
+                        s_portraitMode = false;
+                        Reminders.PortraitPreview = false;
+                        HudBadges.Invalidate();
+                        s_index = 0;
                         s_enabled = Show();
+                        SetInputBlocked(s_enabled);
+                        Toast("完整布局编辑器");
+                        Log.Info("layout editor on (full list)");
                     }
-
-                    if (!s_enabled)
+                    else
                     {
-                        Hide();
-                    }
+                        s_enabled = !s_enabled;
+                        if (s_enabled)
+                        {
+                            s_enabled = Show();
+                        }
 
-                    SetInputBlocked(s_enabled);
-                    Log.Info("layout editor " + (s_enabled ? "on" : "off"));
+                        if (!s_enabled)
+                        {
+                            Hide();
+                        }
+
+                        SetInputBlocked(s_enabled);
+                        Log.Info("layout editor " + (s_enabled ? "on" : "off"));
+                    }
                 }
 
                 if (s_enabled && !ModConfig.ShowLayoutEditor)
@@ -297,10 +327,15 @@ namespace SomeOptimizations
                     s_root.SetActive(true);
                 }
 
-                List<Layout.Item> items = Layout.Items;
+                List<Layout.Item> items = ActiveItems();
                 if (items.Count == 0)
                 {
                     return;
+                }
+
+                if (s_index >= items.Count)
+                {
+                    s_index = 0;
                 }
 
                 bool dirty = false;
@@ -357,6 +392,64 @@ namespace SomeOptimizations
             {
                 Log.Exception(ex, "EditorUi.Update");
             }
+        }
+
+        /// <summary>
+        /// Opens/closes the player-portrait panel. Opening it also turns on
+        /// <see cref="Reminders.PortraitPreview"/> so the badge is on screen even when today is not
+        /// the player's birthday; closing it drops the preview so the HUD goes back to real data.
+        /// </summary>
+        private static void TogglePortraitEditor()
+        {
+            if (s_enabled && s_portraitMode)
+            {
+                s_enabled = false;
+                Hide();
+                SetInputBlocked(false);
+                Toast("玩家头像预览：关");
+                Log.Info("portrait editor off");
+                return;
+            }
+
+            s_portraitMode = true;
+            Reminders.PortraitPreview = true;
+            HudBadges.Invalidate();
+            s_index = 0;
+
+            s_enabled = Show();
+            if (!s_enabled)
+            {
+                Reminders.PortraitPreview = false;
+                HudBadges.Invalidate();
+            }
+            else
+            {
+                Toast("玩家生日头像预览：已显示");
+                Log.Info("portrait editor on, sprite=" + PlayerPortrait.SpriteName);
+            }
+
+            SetInputBlocked(s_enabled);
+        }
+
+        /// <summary>Layout items the panel currently walks: everything, or just the player portrait.</summary>
+        private static List<Layout.Item> ActiveItems()
+        {
+            if (!s_portraitMode)
+            {
+                return Layout.Items;
+            }
+
+            s_portraitItems.Clear();
+            List<Layout.Item> all = Layout.Items;
+            for (int i = 0; i < all.Count; i++)
+            {
+                if (all[i].Key != null && all[i].Key.StartsWith("hud.player.", StringComparison.Ordinal))
+                {
+                    s_portraitItems.Add(all[i]);
+                }
+            }
+
+            return s_portraitItems;
         }
 
         /// <summary>
@@ -494,15 +587,29 @@ namespace SomeOptimizations
             }
 
             s_lastShown = s_index;
-            List<Layout.Item> items = Layout.Items;
+            List<Layout.Item> items = ActiveItems();
+            if (items.Count == 0)
+            {
+                return;
+            }
+
+            if (s_index >= items.Count)
+            {
+                s_index = 0;
+            }
+
             Layout.Item item = items[s_index];
 
-            s_title.text = "布局编辑器  " + (s_index + 1) + "/" + items.Count + "   " + item.Label;
+            s_title.text = (s_portraitMode ? "玩家生日头像  " : "布局编辑器  ") +
+                           (s_index + 1) + "/" + items.Count + "   " + item.Label;
+
+            string closeKey = s_portraitMode ? ModConfig.PlayerEditorKey : ModConfig.EditorKey;
             s_body.text = item.Key + " = " + Layout.Format(item.Value) +
                           "   (范围 " + Layout.Format(item.Min) + "~" + Layout.Format(item.Max) + ")\n" +
+                          (s_portraitMode ? "头像资源：" + PlayerPortrait.SpriteName + "（预览已强制显示）   " : string.Empty) +
                           "↑↓ 选择   ←→ 调整(Shift×10)   " + ModConfig.SaveKey + " 保存   " +
                           ModConfig.DemoKey + " 示例图标   " + ModConfig.DumpKey + " 打印全部   " +
-                          ModConfig.EditorKey + " 关闭";
+                          closeKey + " 关闭";
 
             if (toastActive)
             {
@@ -597,6 +704,14 @@ namespace SomeOptimizations
         {
             PreviewUi.Hide();
             s_previewPage = 0;
+
+            if (s_portraitMode)
+            {
+                s_portraitMode = false;
+                Reminders.PortraitPreview = false;
+                HudBadges.Invalidate();
+                Log.Info("portrait preview off");
+            }
 
             if (s_root != null)
             {

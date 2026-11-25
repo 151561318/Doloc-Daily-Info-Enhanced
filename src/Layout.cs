@@ -67,6 +67,15 @@ namespace SomeOptimizations
             Add("hud.portrait.offX", "头像横向微调", 17f, -30f, 30f, 1f);
             Add("hud.portrait.offY", "头像纵向微调", 15f, -30f, 30f, 1f);
             Add("hud.icon.margin", "头像与背景板的最小间距", 2f, 0f, 12f, 1f);
+
+            // Player birthday portrait. Kept separate from the NPC portrait values above: those were
+            // tuned for calendar portraits packed with wide transparent margins, while the player
+            // sprite is a tight 24x30 rig frame that fills the plate differently.
+            // Defaults are the values the author settled on in the F8 editor (zoom 3.05, y -2).
+            Add("hud.player.scale", "玩家头像缩放", 3.05f, 0.3f, 6f, 0.05f);
+            Add("hud.player.offX", "玩家头像横向微调", 0f, -30f, 30f, 1f);
+            Add("hud.player.offY", "玩家头像纵向微调", -2f, -30f, 30f, 1f);
+            Add("hud.player.margin", "玩家头像与背景板的最小间距", 1f, 0f, 12f, 1f);
         }
 
         internal static List<Item> Items => s_items;
@@ -118,6 +127,10 @@ namespace SomeOptimizations
         internal static float HudPortraitOffX => Val("hud.portrait.offX");
         internal static float HudPortraitOffY => Val("hud.portrait.offY");
         internal static float HudIconMargin => Val("hud.icon.margin");
+        internal static float PlayerPortraitScale => Val("hud.player.scale");
+        internal static float PlayerPortraitOffX => Val("hud.player.offX");
+        internal static float PlayerPortraitOffY => Val("hud.player.offY");
+        internal static float PlayerIconMargin => Val("hud.player.margin");
         internal static float HudBorderWidth => Val("hud.border.width");
         internal static float HudBorderSpread => Val("hud.border.spread");
 

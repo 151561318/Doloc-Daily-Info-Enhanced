@@ -29,6 +29,10 @@ namespace SomeOptimizations
         internal bool Glow;
         internal bool Heart;
         internal string Hover;
+
+        /// <summary>Player's own birthday: same priority as the NPC ones, but its sprite is a rig
+        /// frame instead of a calendar portrait, so it carries its own fit/offset values.</summary>
+        internal bool Player;
     }
 
     /// <summary>
@@ -41,6 +45,13 @@ namespace SomeOptimizations
 
         /// <summary>主线「河道疏通」的最后一节：河路通了，商埠才算开放，游商才可能来。</summary>
         private const string RiverwayDone = "riverway_main_2";
+
+        /// <summary>玩家生日会（酒馆邀约邮件写的是「晚上六点到十点」）。</summary>
+        private const int PlayerPartyStartHour = 18;
+
+        private const int PlayerPartyEndHour = 22;
+
+        private const string PartyWindowText = "18:00-22:00";
 
         private static readonly string[] PortMerchants = { "shylock", "paiea", "quipu", "kenenimuu" };
 
@@ -60,6 +71,12 @@ namespace SomeOptimizations
         /// <summary>F10 in the layout editor: show one of every kind so the row can be tuned anytime.</summary>
         internal static bool DemoMode;
 
+        /// <summary>
+        /// F8 player-portrait editor: force the player's birthday badge onto the row even when today
+        /// is not the player's birthday, so its scale and offset can be tuned without waiting a year.
+        /// </summary>
+        internal static bool PortraitPreview;
+
         internal static void Build(List<Badge> list)
         {
             list.Clear();
@@ -73,6 +90,15 @@ namespace SomeOptimizations
 
             AddPike(list);
             AddBirthdays(list, events);
+
+            // The player-portrait editor needs the badge on screen even when the saved birthday is
+            // another day; keep the real position (right after the NPC birthdays) so what is tuned
+            // is what ships.
+            if (PortraitPreview && !HasPlayerBirthday(list))
+            {
+                AddPlayerBirthday(list, true);
+            }
+
             AddMerchants(list, now);
             AddCrops(list);
             AddFilm(list);
@@ -103,6 +129,16 @@ namespace SomeOptimizations
                     Icon = NpcIcon("kasia"),
                     Heart = true,
                     Hover = "示例：生日（带爱心）"
+                });
+                list.Add(new Badge
+                {
+                    Kind = BadgeKind.Birthday,
+                    Key = "demo:player-birthday",
+                    Icon = PlayerPortrait.Icon(),
+                    Heart = true,
+                    Glow = true,
+                    Player = true,
+                    Hover = "示例：玩家生日（高亮 + 爱心）"
                 });
                 list.Add(new Badge
                 {
@@ -255,7 +291,80 @@ namespace SomeOptimizations
                     Hover = NpcTitle(npcId) + "的生日"
                 });
             }
+
+            // 玩家自己的生日排在所有 NPC 生日之后（同一优先级）。
+            AddPlayerBirthday(list);
         }
+
+        /// <summary>
+        /// 玩家生日。生日是玩家在镇政厅外的日历上填的（<c>agentData.birthday</c>），填之前是 (0,0)，
+        /// 所以每次都要现读，不能缓存。
+        ///
+        /// 生日会：游戏里的邮件「酒馆邀约」写的是「晚上六点到十点来酒馆赴约」，
+        /// 因此 18:00-22:00 之间给这个徽章加和长夜节一样的高亮描边。
+        /// </summary>
+        private static void AddPlayerBirthday(List<Badge> list, bool preview = false)
+        {
+            if (ModConfig.DisablePlayerBirthday && !preview)
+            {
+                return;
+            }
+
+            DateInfo now = GameTime.Now;
+            bool today;
+            try
+            {
+                today = DolocAPI.archiveHandle.IsPlayerBirthday(now.Month, now.Day);
+            }
+            catch (Exception ex)
+            {
+                Log.Exception(ex, "player birthday probe");
+                return;
+            }
+
+            if (!today && !preview)
+            {
+                return;
+            }
+
+            bool party = now.Hour >= PlayerPartyStartHour && now.Hour < PlayerPartyEndHour;
+
+            string hover = party
+                ? "你的生日会开始了\n" + PartyWindowText + " 在酒馆"
+                : "今天是你的生日\n" + PartyWindowText + " 酒馆有生日会";
+
+            if (!today)
+            {
+                hover = "（预览）今天不是你的生日\n" + PartyWindowText + " 酒馆有生日会";
+            }
+
+            list.Add(new Badge
+            {
+                Kind = BadgeKind.Birthday,
+                Key = "birthday:player",
+                Icon = PlayerPortrait.Icon(),
+                Heart = !ModConfig.HideBirthdayHeart,
+                Glow = party,
+                Player = true,
+                Hover = hover
+            });
+        }
+
+        private static bool HasPlayerBirthday(List<Badge> list)
+        {
+            for (int i = 0; i < list.Count; i++)
+            {
+                if (list[i] != null && list[i].Player)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // The player's portrait lives in PlayerPortrait.Icon(): it is a rig frame, not a calendar
+        // portrait, so it has its own loader and its own fit values.
 
         private static void AddMerchants(List<Badge> list, DateInfo now)
         {

@@ -18,6 +18,8 @@ namespace SomeOptimizations
         {
             internal RectTransform Root;
             internal Image Background;
+            internal RectTransform IconClip;
+            internal RectMask2D IconMask;
             internal Image Icon;
             internal Text Plus;
             internal Image Glow;
@@ -262,7 +264,14 @@ namespace SomeOptimizations
             slot.Background = UiFactory.Create(slot.Root, "Bg", ProcSprites.Plate, BadgeBackgrounds.Resolve(ModConfig.BadgeBackground)).GetComponent<Image>();
             slot.Background.raycastTarget = true;
 
-            slot.Icon = UiFactory.Create(slot.Root, "Icon", null, Color.white).GetComponent<Image>();
+            // Clipping container for the portrait. Only the player's badge turns it on: that art is a
+            // full body the user can zoom past the plate, and anything outside the plate must not
+            // spill over its neighbours. NPC portraits keep the unclipped look they were tuned for.
+            slot.IconClip = UiFactory.Create(slot.Root, "IconClip", null, new Color(0f, 0f, 0f, 0f));
+            slot.IconMask = slot.IconClip.gameObject.AddComponent<RectMask2D>();
+            slot.IconMask.enabled = false;
+
+            slot.Icon = UiFactory.Create(slot.IconClip, "Icon", null, Color.white).GetComponent<Image>();
 
             Font font = s_tip != null ? TipFont() : Resources.GetBuiltinResource<Font>("Arial.ttf");
             slot.Plus = UiFactory.CreateText(slot.Root, "Plus", font, Mathf.RoundToInt(Layout.HudPlusSize),
@@ -348,6 +357,15 @@ namespace SomeOptimizations
             UiFactory.Size(slot.Glow.rectTransform, size * Layout.GlowScale, size * Layout.GlowScale);
             UiFactory.Size(slot.Background.rectTransform, size, size);
 
+            // The portrait lives inside this square; with the mask on, zoomed artwork is cut at the
+            // plate edge instead of bleeding over the next badge.
+            UiFactory.Size(slot.IconClip, size, size);
+            slot.IconClip.anchoredPosition = Vector2.zero;
+            if (slot.IconMask.enabled != badge.Player)
+            {
+                slot.IconMask.enabled = badge.Player;
+            }
+
             // Border highlight: four thin bars hugging the plate, visible even in broad daylight.
             float thickness = Layout.HudBorderWidth;
             float spread = Layout.HudBorderSpread;
@@ -385,17 +403,23 @@ namespace SomeOptimizations
             if (badge.Icon != null && (badge.Kind == BadgeKind.Birthday || badge.Kind == BadgeKind.Merchant ||
                                        badge.Kind == BadgeKind.Pike))
             {
+                // The player's badge uses a rig frame and therefore its own fit values, tuned in the
+                // dedicated F8 editor; the NPC portraits keep the calendar-calibrated ones.
+                float margin = badge.Player ? Layout.PlayerIconMargin : Layout.HudIconMargin;
+                float scale = badge.Player ? Layout.PlayerPortraitScale : Layout.HudPortraitScale;
+                float offX = badge.Player ? Layout.PlayerPortraitOffX : Layout.HudPortraitOffX;
+                float offY = badge.Player ? Layout.PlayerPortraitOffY : Layout.HudPortraitOffY;
+
                 // Scale about the plate centre so shrinking stays centred and growing keeps it
-                // growing until it fills (and can overhang) the plate.
-                float margin = Layout.HudIconMargin;
+                // growing until it fills (and can overhang) the plate. The player portrait may zoom
+                // far past the plate (clipped by IconMask); NPC portraits keep the old 1.8x ceiling.
                 float maxBox = Mathf.Max(6f, size - margin * 2f);
-                float box = Mathf.Clamp(maxBox * Layout.HudPortraitScale, 6f, size * 1.8f);
+                float ceiling = badge.Player ? size * 6f : size * 1.8f;
+                float box = Mathf.Clamp(maxBox * scale, 6f, ceiling);
                 IconFit.Fit(slot.Icon, box, IconFit.Align.Center);
 
                 // IconFit centred the ink; the user offset is added on top of that.
-                slot.Icon.rectTransform.anchoredPosition += new Vector2(
-                    Layout.HudPortraitOffX,
-                    Layout.HudPortraitOffY);
+                slot.Icon.rectTransform.anchoredPosition += new Vector2(offX, offY);
             }
             else
             {

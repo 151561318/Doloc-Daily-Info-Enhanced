@@ -12,7 +12,7 @@ namespace SomeOptimizations
     public sealed class ModEntry : DtmMod
     {
         internal const string HarmonyId = "SomeOptimizations";
-        internal const string Version = "1.9.9";
+        internal const string Version = "1.10.3";
         internal static IMonitor Logger;
 
         private Harmony _harmony;

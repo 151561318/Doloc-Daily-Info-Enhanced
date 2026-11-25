@@ -21,6 +21,9 @@ namespace SomeOptimizations
 
         public bool HideBirthdayHeart { get; set; }
 
+        /// <summary>Suppresses the player's own birthday reminder.</summary>
+        public bool DisablePlayerBirthday { get; set; }
+
         public bool DisablePikeSpecial { get; set; }
 
         public bool DisablePortMerchant { get; set; }
@@ -45,6 +48,9 @@ namespace SomeOptimizations
         public bool DemoBadges { get; set; }
 
         public string EditorKey { get; set; }
+
+        /// <summary>Opens the player-portrait editor (defaults to F8); see <see cref="EditorUi"/>.</summary>
+        public string PlayerEditorKey { get; set; }
 
         public string SaveKey { get; set; }
 
